@@ -1,0 +1,21 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+
+- task: Docker@2
+  inputs:
+    containerRegistry: 'webappscr'
+    repository: 'dotnet'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    # buildContext: '(System.DefaultWorkingDirectory)'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
