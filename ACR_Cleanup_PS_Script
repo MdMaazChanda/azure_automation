@@ -1,0 +1,38 @@
+# ACR Cleanup PS Script
+# Put this script in Azure Automation Runbook . Schedule it last day of month thereby It will Keep latest 5 tags in ACR rest It will delete and it will save storage cost.
+
+# Import necessary modules
+Import-Module Az.Accounts
+Import-Module Az.KeyVault
+Import-Module Az.Resources
+
+# Disable context autosave
+Disable-AzContextAutoSave -Scope Process | Out-Null
+
+$ACR_NAME="mohammedmaaz"
+$ACR_LOGIN_SERVER="mohammedmaaz.azurecr.io"
+$RESOURCE_GROUP_NAME="rg-md-acr"
+$sortedImg=@{}
+
+# Listing all the images present in acr repos
+$REPOS=Get-AzContainerRegistryRepository -RegostryName $ACR_NAME
+
+foreach ($REPO in $REPOS) {
+	Write-Output "Listing Image Tags In $REPO"
+	$IMG_TAGS=Get-AzContainerRegistryTag -RegistryName $ACR_NAME -RepositoryName $REPO | Select-Object -ExpandProperty Tags
+	
+	$sortedImg=($IMG_TAGS.lastUpdateTime | Sort-Object -Property { [datetime]::Parse($_)} -Descending)
+	$sorts=$sortedImg[3..($sortedImg.Count  -1)]
+	$sorted=$IMG_TAGS | Where-Object { $sorts -contains $_.lastUpdateTime }
+	$tag=$sorted.Name
+	
+	if ($sorted.Count -eq 1) {
+		Write-Output "Unable to delete tag because it is Latest"
+	}
+	else {
+		foreach ($tags in $tag) {
+			Write-Output "Deleting AB=bove Tags from $REPO with $tags"
+			Remove-AzContainerRegistryTag -RegistryName $ACR_NAME -RegistryName $REPO -Name $tags
+		}
+	}
+}	
