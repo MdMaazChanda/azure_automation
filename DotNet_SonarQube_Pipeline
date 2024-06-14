@@ -1,0 +1,60 @@
+# ASP.NET
+# Build and test ASP.NET projects.
+# Add steps that publish symbols, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/apps/aspnet/build-aspnet-4
+
+trigger:
+- main
+
+pool:
+  vmImage: 'windows-latest'
+
+
+steps:
+- task: NuGetToolInstaller@1
+
+- task: NuGetCommand@2
+  inputs:
+    restoreSolution: '$(solution)'
+- task: SonarQubePrepare@5
+  inputs:
+    SonarQube: 'sc-sonar'
+    scannerMode: 'MSBuild'
+    projectKey: 'DotNet'
+    projectName: '$(Build.Repository.Name)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Restoring the Application'
+  inputs:
+    command: 'restore'
+    feedsToUse: 'select'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Building the Application'
+  inputs:
+    command: 'build'
+    projects: '**/*.csproj'
+    arguments: '--configuration $(BuildConfiguration)'
+
+- task: SonarQubeAnalyze@5
+  displayName: 'Analyse SonarQube'
+  inputs:
+    jdkversion: 'JAVA_HOME_11_X64'
+
+- task: SonarQubePublish@5
+  displayName: 'Publishing Quality Gate Results'
+  inputs:
+    pollingTimeoutSec: '300'
+- task: DotNetCoreCLI@2
+  displayName: 'Publish Project Application'
+  inputs:
+    command: 'publish'
+    publishWebProjects: true
+    arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publishing The Artifacts'
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
