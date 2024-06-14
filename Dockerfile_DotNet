@@ -1,0 +1,25 @@
+# Use the official .NET SDK image as the base image
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build-env
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the .csproj file and restore dependencies
+COPY *.csproj ./
+RUN dotnet restore
+
+# Copy the remaining source code
+COPY . ./
+
+# Build the application
+RUN dotnet publish -c Release -o /app/output
+# Create the final runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:7.0
+WORKDIR /app
+COPY --from=build-env /app/output .
+
+# Expose the port your app listens on
+EXPOSE 80
+
+# Start the app
+ENTRYPOINT ["dotnet", "demoapplication.dll"]
